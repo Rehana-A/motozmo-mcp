@@ -7,7 +7,7 @@ Everything below is ready to paste. Steps marked 🔑 need Rehana's GitHub login
 
 - **Name:** Motozmo — Motorcycle Repair Guides
 - **Registry name:** `io.github/rehanaakter/motozmo`
-- **Tagline:** Search 50+ motorcycle repair guides and gear reviews from motozmo.com
+- **Tagline:** Search 190+ motorcycle repair guides and gear reviews from motozmo.com
 - **Category:** Lifestyle / Reference / Automotive
 - **Install (local):** `npx -y motozmo-mcp`
 - **Remote endpoint:** (fill in after hosting, e.g. `https://motozmo-mcp.onrender.com/mcp`)
