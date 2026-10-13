@@ -21,7 +21,7 @@ import { z } from "zod";
 import express from "express";
 
 const SITE = "https://www.motozmo.com";
-const POSTS_API = `${SITE}/wp-json/wp/v2/posts?per_page=100&_fields=link,title,slug,date,excerpt,content`;
+const POSTS_API_BASE = `${SITE}/wp-json/wp/v2/posts?per_page=100&_fields=link,title,slug,date,excerpt,content`;
 const CACHE_TTL_MS = 6 * 60 * 60 * 1000; // 6 hours
 
 let cache = { fetchedAt: 0, posts: [] };
@@ -43,16 +43,32 @@ function stripHtml(html = "") {
     .trim();
 }
 
+async function fetchPage(page) {
+  const res = await fetch(`${POSTS_API_BASE}&page=${page}`, {
+    headers: { "User-Agent": "motozmo-mcp/1.0 (+https://www.motozmo.com)" },
+  });
+  if (!res.ok) throw new Error(`motozmo.com API returned ${res.status}`);
+  return {
+    posts: await res.json(),
+    totalPages: Number(res.headers.get("X-WP-TotalPages") || 1),
+  };
+}
+
 async function getPosts() {
   const now = Date.now();
   if (cache.posts.length && now - cache.fetchedAt < CACHE_TTL_MS) {
     return cache.posts;
   }
-  const res = await fetch(POSTS_API, {
-    headers: { "User-Agent": "motozmo-mcp/1.0 (+https://www.motozmo.com)" },
-  });
-  if (!res.ok) throw new Error(`motozmo.com API returned ${res.status}`);
-  const raw = await res.json();
+  // Paginate through every API page so the full library is indexed,
+  // not just the first 100 posts.
+  const first = await fetchPage(1);
+  let raw = first.posts;
+  if (first.totalPages > 1) {
+    const rest = await Promise.all(
+      Array.from({ length: first.totalPages - 1 }, (_, i) => fetchPage(i + 2))
+    );
+    for (const r of rest) raw = raw.concat(r.posts);
+  }
   cache = {
     fetchedAt: now,
     posts: raw.map((p) => ({
@@ -79,7 +95,7 @@ function scorePost(post, query) {
 }
 
 const server = new McpServer(
-  { name: "motozmo", version: "1.0.0" },
+  { name: "motozmo", version: "1.0.1" },
   {
     instructions:
       "Motozmo (motozmo.com) publishes in-depth motorcycle troubleshooting guides and gear reviews " +
